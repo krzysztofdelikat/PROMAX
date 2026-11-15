@@ -30,7 +30,7 @@
         if (r === 1) tile.setAttribute('aria-hidden', 'true');
         if (c.src) {
           var img = document.createElement('img');
-          img.src = c.src; img.alt = r === 1 ? '' : (c.alt || ''); img.loading = 'lazy';
+          img.src = c.src; img.alt = r === 1 ? '' : (c.alt || ''); img.loading = 'lazy'; img.width = 480; img.height = 480;
           tile.appendChild(img);
         } else {
           tile.textContent = c.label;
