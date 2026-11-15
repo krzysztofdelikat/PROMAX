@@ -76,7 +76,6 @@
     '.contact .info > *', '.form', '.footer .wrap > *', '.footer .col'
   ].join(',');
 
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var root = document.documentElement;
 
   function direction(el) {
@@ -96,7 +95,7 @@
     el.style.removeProperty('--rd');
   }
 
-  if (!reduce && 'IntersectionObserver' in window) {
+  if ('IntersectionObserver' in window) {
     var targets = [].slice.call(document.querySelectorAll(REVEAL_SELECTORS))
       .filter(function (el) { return !el.closest('.hero') && !el.closest('.marquee'); });
 
@@ -107,8 +106,11 @@
       var i = groups.get(p) || 0;
       groups.set(p, i + 1);
       el.style.setProperty('--rd', Math.min(i, 6) * 110 + 'ms');
+      el.style.transition = 'none';                    // ukryj od razu, bez wygaszania
       el.setAttribute('data-reveal', direction(el));
     });
+    void document.body.offsetHeight;                   // zatwierdź stan początkowy
+    targets.forEach(function (el) { el.style.transition = ''; });
 
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
