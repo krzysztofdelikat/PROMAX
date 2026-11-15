@@ -1,12 +1,24 @@
 /* PROMAX – skrypty strony */
 (function () {
   'use strict';
+  window.__promaxReady = true;
 
-  /* ---- Logotypy klientów ----
-     Podmień placeholdery na pliki, np.:
-     { src: 'assets/img/klienci/firma.svg', alt: 'Nazwa firmy' }            */
-  var CLIENT_LOGOS = [];
-  for (var i = 1; i <= 12; i++) CLIENT_LOGOS.push({ label: '[Logo klienta ' + i + ']' });
+  /* ---- Logotypy klientów („Zaufali nam”) ----
+     Nowe logo: dodaj plik do assets/img/klienci/ i dopisz linię poniżej. */
+  var CLIENT_LOGOS = [
+    { src: 'assets/img/klienci/ostoya.webp', alt: 'Ostoya' },
+    { src: 'assets/img/klienci/lift-rzeszow-orona.webp', alt: 'Lift Rzeszów Orona' },
+    { src: 'assets/img/klienci/synektik.webp', alt: 'Synektik' },
+    { src: 'assets/img/klienci/poeton-polska.webp', alt: 'Poeton Polska' },
+    { src: 'assets/img/klienci/overra.webp', alt: 'Overra – świat łazienek' },
+    { src: 'assets/img/klienci/centrum-medyczne-medyk.webp', alt: 'Centrum Medyczne Medyk' },
+    { src: 'assets/img/klienci/hansen.webp', alt: 'Hansen' },
+    { src: 'assets/img/klienci/fundacja-quality-qlture.webp', alt: 'Fundacja Quality Qlture' },
+    { src: 'assets/img/klienci/akademia-aktywnosci.webp', alt: 'Akademia Aktywności Delfina & Bartek' },
+    { src: 'assets/img/klienci/evestetic.webp', alt: 'Evestetic – cosmetology & spa' },
+    { src: 'assets/img/klienci/reformacka-nieruchomosci.webp', alt: 'Reformacka Nieruchomości' },
+    { src: 'assets/img/klienci/alston.webp', alt: 'Alston – jakość & elegancja' }
+  ];
 
   var track = document.getElementById('clients-track');
   if (track) {
@@ -53,17 +65,92 @@
     });
   });
 
-  /* ---- Animacja pojawiania się ---- */
-  var items = document.querySelectorAll('.reveal');
-  if ('IntersectionObserver' in window) {
+  /* ---- Pojawianie się sekcji i „wjeżdżające” elementy ----
+     Każdy element wjeżdża z tej krawędzi ekranu, do której ma bliżej.
+     Elementy wyśrodkowane (np. pełna szerokość na telefonie) wysuwają się od dołu. */
+  var REVEAL_SELECTORS = [
+    '.sec-head > *', 'section > .wrap > .eyebrow', 'section > .wrap > .h2',
+    '.fact', '.card', '.step', '.shot-wrap', '.clients .label', '.clients .viewport',
+    '.about .copy > *', '.tile', '.shop-in > *',
+    '.faq-list details', '.motto .wrap > *',
+    '.contact .info > *', '.form', '.footer .wrap > *', '.footer .col'
+  ].join(',');
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var root = document.documentElement;
+
+  function direction(el) {
+    if (el.dataset.revealFrom) return el.dataset.revealFrom;   // wymuszony kierunek
+    var r = el.getBoundingClientRect();
+    var vw = window.innerWidth || root.clientWidth;
+    var center = r.left + r.width / 2;
+    var off = (center - vw / 2) / vw;
+    if (Math.abs(off) < 0.06) return 'up';
+    return off < 0 ? 'left' : 'right';
+  }
+
+  function finish(el) {
+    // po animacji zdejmujemy znaczniki – wracają zwykłe efekty hover
+    el.removeAttribute('data-reveal');
+    el.classList.remove('is-in');
+    el.style.removeProperty('--rd');
+  }
+
+  if (!reduce && 'IntersectionObserver' in window) {
+    var targets = [].slice.call(document.querySelectorAll(REVEAL_SELECTORS))
+      .filter(function (el) { return !el.closest('.hero') && !el.closest('.marquee'); });
+
+    // kolejność wjazdu w obrębie wspólnego rodzica (kaskada)
+    var groups = new Map();
+    targets.forEach(function (el) {
+      var p = el.parentElement;
+      var i = groups.get(p) || 0;
+      groups.set(p, i + 1);
+      el.style.setProperty('--rd', Math.min(i, 6) * 110 + 'ms');
+      el.setAttribute('data-reveal', direction(el));
+    });
+
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+        if (!e.isIntersecting) return;
+        var el = e.target;
+        io.unobserve(el);
+        if (el.classList.contains('sec-fade')) { el.classList.add('is-in'); return; }
+        el.classList.add('is-in');
+        var done = function (ev) {
+          if (ev && ev.target !== el) return;
+          el.removeEventListener('transitionend', done);
+          finish(el);
+        };
+        el.addEventListener('transitionend', done);
+        setTimeout(done, 2200);
       });
-    }, { threshold: 0.12 });
-    items.forEach(function (el) { io.observe(el); });
+    }, { threshold: 0.15, rootMargin: '0px 0px -6% 0px' });
+
+    targets.forEach(function (el) { io.observe(el); });
+
+    // całe sekcje delikatnie się wyłaniają
+    document.querySelectorAll('main > section:not(.hero), .clients, .footer').forEach(function (sec) {
+      sec.classList.add('sec-fade');
+      io.observe(sec);
+    });
+
+    // zmiana szerokości okna (np. obrót telefonu) – przelicz strony wjazdu
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(function () {
+        document.querySelectorAll('[data-reveal]:not(.is-in)').forEach(function (el) {
+          el.style.transition = 'none';
+          el.removeAttribute('data-reveal');          // pomiar bez przesunięcia
+          el.setAttribute('data-reveal', direction(el));
+          void el.offsetWidth;
+          el.style.transition = '';
+        });
+      }, 200);
+    });
   } else {
-    items.forEach(function (el) { el.classList.add('is-in'); });
+    root.classList.remove('js');
   }
 
   /* ---- Formularz wyceny ----
