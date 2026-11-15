@@ -1,0 +1,47 @@
+# Publikacja strony na GitHub Pages z automatycznym odświeżaniem cache.
+# Przy każdej wysyłce do gałęzi main wszystkie odwołania do plików z assets/
+# (CSS, JS, obrazy) dostają znacznik ?v=<numer commita>, więc przeglądarki
+# zawsze pobierają nowe wersje zamiast starych z pamięci podręcznej.
+name: Publikacja strony
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publikacja:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Przygotowanie plików i wersjonowanie (odświeżenie cache)
+        run: |
+          V="${GITHUB_SHA::8}"
+          mkdir -p _site
+          git archive HEAD | tar -x -C _site
+          rm -rf _site/.github _site/README.md
+          cd _site
+          sed -i -E "s#(assets/[^\"'?) ]+\.(css|js|svg|png|webp|jpg|jpeg))(\?v=[^\"' )]*)?#\1?v=${V}#g" *.html assets/js/main.js
+          echo "Wersja plików: ${V}"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
