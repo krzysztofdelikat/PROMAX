@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gantari:wght@300;400;500;600;700;800;900&display=swap">
-<link rel="stylesheet" href="assets/css/style.css?v=4">
+<link rel="stylesheet" href="assets/css/style.css?v=5">
 <script>document.documentElement.classList.add('js');</script>
 <script type="application/ld+json">
 {
@@ -244,8 +244,16 @@
 <!-- KLIENCI -->
 <section class="clients" aria-label="Zaufali nam">
   <p class="label">Zaufali nam</p>
-  <div class="viewport" data-reveal-from="right">
-    <div class="track" id="clients-track"></div>
+  <div class="carousel" data-reveal-from="right" role="region" aria-roledescription="karuzela" aria-label="Logotypy klientów">
+    <button class="car-btn car-prev" type="button" aria-label="Poprzednie logo">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="viewport">
+      <div class="car-track" id="clients-track"></div>
+    </div>
+    <button class="car-btn car-next" type="button" aria-label="Następne logo">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
   </div>
 </section>
 
@@ -353,6 +361,6 @@
   <p class="copy">© <span id="year">2026</span> PROMAX Agencja Reklamy. Oklejanie pojazdów, znakowanie odzieży, kasetony reklamowe i gadżety z logo.</p>
 </footer>
 
-<script src="assets/js/main.js?v=4" defer onerror="document.documentElement.classList.remove('js')"></script>
+<script src="assets/js/main.js?v=5" defer onerror="document.documentElement.classList.remove('js')"></script>
 </body>
 </html>

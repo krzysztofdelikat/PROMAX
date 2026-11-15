@@ -20,24 +20,85 @@
     { src: 'assets/img/klienci/alston.webp', alt: 'Alston – jakość & elegancja' }
   ];
 
+  /* ---- Karuzela logotypów: losowa kolejność przy każdym wejściu ---- */
   var track = document.getElementById('clients-track');
   if (track) {
-    // dwa przebiegi = płynna pętla marquee
-    for (var r = 0; r < 2; r++) {
-      CLIENT_LOGOS.forEach(function (c) {
-        var tile = document.createElement('div');
-        tile.className = 'logo-tile';
-        if (r === 1) tile.setAttribute('aria-hidden', 'true');
-        if (c.src) {
-          var img = document.createElement('img');
-          img.src = c.src; img.alt = r === 1 ? '' : (c.alt || ''); img.loading = 'lazy'; img.width = 480; img.height = 480;
-          tile.appendChild(img);
-        } else {
-          tile.textContent = c.label;
-        }
-        track.appendChild(tile);
+    var logos = CLIENT_LOGOS.slice();
+    for (var k = logos.length - 1; k > 0; k--) {           // tasowanie Fisher-Yates
+      var j = Math.floor(Math.random() * (k + 1));
+      var tmp = logos[k]; logos[k] = logos[j]; logos[j] = tmp;
+    }
+    logos.forEach(function (c) {
+      var tile = document.createElement('div');
+      tile.className = 'logo-tile';
+      var img = document.createElement('img');
+      img.src = c.src; img.alt = c.alt || ''; img.width = 480; img.height = 480;
+      tile.appendChild(img);
+      track.appendChild(tile);
+    });
+
+    var carousel = track.closest('.carousel');
+    var viewport = track.parentElement;
+    var busy = false, timer = null;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var SPEED = still ? 0 : 600;     // ms przesunięcia
+    var EVERY = 2600;                // ms między krokami
+
+    function stepSize() {
+      var t = track.children[0];
+      return t.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap || 0);
+    }
+    function slide(px, ms, done) {
+      track.style.transition = ms ? 'transform ' + ms + 'ms cubic-bezier(.65,0,.35,1)' : 'none';
+      track.style.transform = 'translate3d(' + px + 'px,0,0)';
+      if (!ms) { done && done(); return; }
+      var fin = function (e) { if (e && e.target !== track) return; track.removeEventListener('transitionend', fin); clearTimeout(safety); done && done(); };
+      var safety = setTimeout(fin, ms + 80);
+      track.addEventListener('transitionend', fin);
+    }
+    function next() {
+      if (busy) return; busy = true;
+      slide(-stepSize(), SPEED, function () {
+        track.appendChild(track.firstElementChild);       // pierwsze logo na koniec
+        slide(0, 0); busy = false;
       });
     }
+    function prev() {
+      if (busy) return; busy = true;
+      var s = stepSize();
+      track.insertBefore(track.lastElementChild, track.firstElementChild);  // ostatnie na początek
+      slide(-s, 0);
+      void track.offsetWidth;
+      slide(0, SPEED, function () { busy = false; });
+    }
+    function play() { if (!timer && !still) timer = setInterval(next, EVERY); }
+    function stop() { clearInterval(timer); timer = null; }
+
+    carousel.querySelector('.car-next').addEventListener('click', function () { stop(); next(); play(); });
+    carousel.querySelector('.car-prev').addEventListener('click', function () { stop(); prev(); play(); });
+    carousel.addEventListener('mouseenter', stop);
+    carousel.addEventListener('mouseleave', play);
+    carousel.addEventListener('focusin', stop);
+    carousel.addEventListener('focusout', play);
+
+    // przesuwanie palcem / myszą
+    var startX = null;
+    viewport.addEventListener('pointerdown', function (e) { startX = e.clientX; stop(); });
+    window.addEventListener('pointerup', function (e) {
+      if (startX === null) return;
+      var dx = e.clientX - startX; startX = null;
+      if (dx < -40) next(); else if (dx > 40) prev();
+      if (!carousel.matches(':hover')) play();
+    });
+    viewport.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+    // nie kręć, gdy karta przeglądarki jest w tle
+    document.addEventListener('visibilitychange', function () { document.hidden ? stop() : play(); });
+
+    // ruszaj dopiero, gdy karuzela jest na ekranie
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (en) { en[0].isIntersecting ? play() : stop(); }, { threshold: 0.3 }).observe(carousel);
+    } else { play(); }
   }
 
   /* ---- Menu mobilne ---- */
@@ -70,7 +131,7 @@
      Elementy wyśrodkowane (np. pełna szerokość na telefonie) wysuwają się od dołu. */
   var REVEAL_SELECTORS = [
     '.sec-head > *', 'section > .wrap > .eyebrow', 'section > .wrap > .h2',
-    '.fact', '.card', '.step', '.shot-wrap', '.clients .label', '.clients .viewport',
+    '.fact', '.card', '.step', '.shot-wrap', '.clients .label', '.clients .carousel',
     '.about .copy > *', '.tile', '.shop-in > *',
     '.faq-list details', '.motto .wrap > *',
     '.contact .info > *', '.form', '.footer .wrap > *', '.footer .col'
